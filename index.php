@@ -4,7 +4,7 @@ declare(strict_types=1);
 /*
  * ANIME LIBRARY — single-file local streaming interface
  * Place this file at /srv/http/animelist/index.php
- * Anime folders are expected at /srv/http/animelist/anime/{end,ongoing}/{Title}/{Episode files}
+ * Anime folders are expected at /srv/http/animelist/anime/{end,ongoing}/{Title}/ with optional nested season folders and poster.png
  */
 
 $animeRoot = __DIR__ . '/anime';
@@ -21,7 +21,11 @@ function displayTitle(string $value): string {
 }
 
 function urlPath(array $segments): string {
-    return implode('/', array_map('rawurlencode', $segments));
+    // Encode each path segment separately so nested season folders keep their slashes.
+    return implode('/', array_map(
+        fn($segment) => implode('/', array_map('rawurlencode', explode('/', str_replace('\\', '/', (string)$segment)))),
+        $segments
+    ));
 }
 
 function formatBytes(int|false $bytes): string {
@@ -52,16 +56,28 @@ function scanLibrary(string $root, array $categories, array $extensions): array 
             $showPath = $categoryPath . DIRECTORY_SEPARATOR . $show;
             if (!is_dir($showPath) || !is_readable($showPath)) continue;
 
-            $files = scandir($showPath) ?: [];
+            // Scan recursively so folders such as Season 1/ and Season 2/ are included.
+            // getSubPathname() keeps the relative folder path needed to stream each file.
             $episodes = [];
-            foreach ($files as $file) {
-                if ($file === '.' || $file === '..' || str_starts_with($file, '.')) continue;
-                $filePath = $showPath . DIRECTORY_SEPARATOR . $file;
-                $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-                if (is_file($filePath) && in_array($extension, $extensions, true)) {
+            $directory = new RecursiveDirectoryIterator($showPath, FilesystemIterator::SKIP_DOTS);
+            $iterator = new RecursiveIteratorIterator($directory);
+            foreach ($iterator as $fileInfo) {
+                if (!$fileInfo->isFile() || $fileInfo->isLink()) continue;
+
+                $relativePath = str_replace(DIRECTORY_SEPARATOR, '/', $iterator->getSubPathname());
+                $parts = explode('/', $relativePath);
+                $hiddenPath = false;
+                foreach ($parts as $part) {
+                    if (str_starts_with($part, '.')) { $hiddenPath = true; break; }
+                }
+                if ($hiddenPath) continue;
+
+                $extension = strtolower(pathinfo($fileInfo->getFilename(), PATHINFO_EXTENSION));
+                if (in_array($extension, $extensions, true)) {
                     $episodes[] = [
-                        'name' => $file,
-                        'size' => filesize($filePath),
+                        'name' => $relativePath,
+                        'display' => $relativePath,
+                        'size' => $fileInfo->getSize(),
                         'extension' => $extension,
                     ];
                 }
@@ -224,8 +240,17 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
             display: flex; flex-direction: column; min-height: 166px; padding: 17px;
             border: 1px solid var(--line); border-radius: var(--radius);
             background: linear-gradient(145deg, rgba(35,23,28,.96), rgba(23,16,19,.96));
+            background-position: center; background-size: cover; background-repeat: no-repeat;
             transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
         }
+        .anime-card.has-poster {
+            background-position: center 30%;
+            box-shadow: inset 0 -100px 75px -28px rgba(12,7,10,.94), inset 0 0 0 1000px rgba(12,7,10,.12);
+        }
+        .anime-card.has-poster .folder-icon,
+        .anime-card.has-poster .pill { backdrop-filter: blur(8px); }
+        .anime-card.has-poster h3,
+        .anime-card.has-poster .card-meta { text-shadow: 0 2px 8px rgba(0,0,0,.95); }
         .anime-card:hover { transform: translateY(-3px); border-color: #8d344b; box-shadow: 0 12px 28px rgba(0,0,0,.2); }
         .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
         .folder-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: rgba(220,20,60,.13); color: #ff7189; font-size: 19px; }
@@ -239,8 +264,16 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
         .notice { margin-bottom: 18px; border-color: rgba(212,175,55,.3); color: #e7d9a8; }
         .back { display: inline-flex; margin-bottom: 20px; color: var(--muted); font-size: 13px; }
         .back:hover { color: white; }
-        .detail-head { padding: 25px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-        .detail-head h1 { font-size: clamp(27px, 4vw, 42px); margin: 9px 0; overflow-wrap: anywhere; }
+        .detail-head {
+            position: relative; isolation: isolate; overflow: hidden;
+            min-height: 230px; display: flex; flex-direction: column; justify-content: center;
+            padding: clamp(25px, 5vw, 38px); border: 1px solid #4a2832;
+            border-radius: var(--radius); background-color: var(--panel);
+            background-position: center 30%; background-size: cover; background-repeat: no-repeat;
+            box-shadow: 0 18px 50px rgba(0,0,0,.18);
+        }
+        .detail-head h1 { font-size: clamp(27px, 4vw, 42px); margin: 9px 0; overflow-wrap: anywhere; text-shadow: 0 2px 12px rgba(0,0,0,.85); }
+        .detail-head p { text-shadow: 0 2px 10px rgba(0,0,0,.9); }
         .episode-list { display: grid; gap: 9px; }
         .episode {
             display: flex; align-items: center; justify-content: space-between; gap: 15px;
@@ -307,19 +340,29 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
             </video>
             <div class="player-info">
                 <div class="eyebrow"><?= e($categories[$selectedCategory]) ?> / <?= e(displayTitle($selectedShowName)) ?></div>
-                <h1><?= e($selectedEpisodeName) ?></h1>
+                <h1><?= e($selectedEpisode['display'] ?? $selectedEpisodeName) ?></h1>
                 <p><?= e(strtoupper($selectedEpisode['extension'])) ?> · <?= e(formatBytes($selectedEpisode['size'])) ?></p>
                 <?php if (in_array($selectedEpisode['extension'], ['mkv', 'avi', 'mov'], true)): ?>
                     <div class="compat">Catatan: dukungan MKV, AVI, dan beberapa MOV bergantung pada browser serta codec di dalam file. Jika video tidak tampil, coba buka file MP4/WebM atau gunakan pemutar eksternal seperti VLC.</div>
                 <?php endif; ?>
             </div>
         </div>
-        <div class="section-head"><div><h2>Episodes</h2><p>Pilih episode lain dari seri ini</p></div><span class="count"><?= count($selectedAnime) ?> files</span></div>
+        <div class="section-head"><div><h2>Episodes</h2><p>Dua episode sebelumnya, episode aktif, lalu episode berikutnya</p></div><span class="count"><?= count($selectedAnime) ?> files</span></div>
+        <?php
+            // Rotate the list so up to two previous episodes appear first,
+            // the currently playing episode is next, and the remaining list wraps to episode 1.
+            $currentIndex = array_search($selectedEpisodeName, array_column($selectedAnime, 'name'), true);
+            $startIndex = ($currentIndex === false) ? 0 : max(0, $currentIndex - 2);
+            $orderedEpisodes = array_merge(
+                array_slice($selectedAnime, $startIndex),
+                array_slice($selectedAnime, 0, $startIndex)
+            );
+        ?>
         <div class="episode-list">
-            <?php foreach ($selectedAnime as $episode): ?>
+            <?php foreach ($orderedEpisodes as $episode): ?>
                 <?php $isCurrent = $episode['name'] === $selectedEpisodeName; ?>
                 <a class="episode" href="?watch=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $episode['name']) ?>">
-                    <span class="episode-name"><span class="play-icon"><?= $isCurrent ? '▶' : '▷' ?></span><?= e($episode['name']) ?></span>
+                    <span class="episode-name"><span class="play-icon"><?= $isCurrent ? '▶' : '▷' ?></span><?= e($episode['display'] ?? $episode['name']) ?></span>
                     <span class="episode-size"><?= e(formatBytes($episode['size'])) ?></span>
                 </a>
             <?php endforeach; ?>
@@ -327,10 +370,21 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
 
     <?php elseif ($selectedAnime !== null): ?>
         <a class="back" href="index.php">← Back to library</a>
-        <section class="detail-head">
+        <?php
+            $detailPosterFile = $animeRoot . '/' . $selectedCategory . '/' . $selectedShowName . '/poster.png';
+            $hasDetailPoster = is_file($detailPosterFile) && is_readable($detailPosterFile);
+            $detailPosterUrl = 'anime/' . urlPath([$selectedCategory, $selectedShowName, 'poster.png']);
+            if ($hasDetailPoster) $detailPosterUrl .= '?v=' . (string)filemtime($detailPosterFile);
+        ?>
+        <section class="detail-head"
+            <?php if ($hasDetailPoster): ?>
+                style="background-image: linear-gradient(90deg, rgba(16,8,12,.96) 0%, rgba(20,9,14,.82) 55%, rgba(20,9,14,.35) 100%), url('<?= e($detailPosterUrl) ?>');"
+            <?php else: ?>
+                style="background-image: linear-gradient(115deg, rgba(75,12,30,.92), rgba(32,17,23,.94) 56%, rgba(42,31,19,.90));"
+            <?php endif; ?>>
             <div class="eyebrow"><?= e($categories[$selectedCategory]) ?> COLLECTION</div>
             <h1><?= e(displayTitle($selectedShowName)) ?></h1>
-            <p style="color:var(--muted);margin:0"><?= count($selectedAnime) ?> video files in this folder</p>
+            <p style="color:#e0cfd5;margin:0"><?= count($selectedAnime) ?> video files in this folder</p>
         </section>
         <div class="section-head"><div><h2>Episode List</h2><p>Pilih video untuk mulai menonton</p></div><span class="count"><?= count($selectedAnime) ?> episodes</span></div>
         <?php if (!$selectedAnime): ?>
@@ -339,7 +393,7 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
             <div class="episode-list">
                 <?php foreach ($selectedAnime as $episode): ?>
                     <a class="episode" href="?watch=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $episode['name']) ?>">
-                        <span class="episode-name"><span class="play-icon">▷</span><?= e($episode['name']) ?></span>
+                        <span class="episode-name"><span class="play-icon">▷</span><?= e($episode['display'] ?? $episode['name']) ?></span>
                         <span class="episode-size"><?= e(formatBytes($episode['size'])) ?></span>
                     </a>
                 <?php endforeach; ?>
@@ -393,7 +447,15 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
                 <?php else: ?>
                     <div class="grid">
                         <?php foreach ($filtered as $showName => $episodes): ?>
-                            <a class="anime-card" href="?anime=<?= rawurlencode($category . '/' . $showName) ?>">
+                            <?php
+                                $posterFile = $animeRoot . '/' . $category . '/' . $showName . '/poster.png';
+                                $posterUrl = 'anime/' . urlPath([$category, $showName, 'poster.png']);
+                                $hasPoster = is_file($posterFile) && is_readable($posterFile);
+                                if ($hasPoster) $posterUrl .= '?v=' . (string)filemtime($posterFile);
+                            ?>
+                            <a class="anime-card<?= $hasPoster ? ' has-poster' : '' ?>"
+                               href="?anime=<?= rawurlencode($category . '/' . $showName) ?>"
+                               <?php if ($hasPoster): ?>style="background-image: linear-gradient(180deg, rgba(16,8,12,.48) 0%, rgba(16,8,12,.18) 35%, rgba(12,7,10,.96) 100%), url('<?= e($posterUrl) ?>');"<?php endif; ?>>
                                 <div class="card-top"><span class="folder-icon">▣</span><span class="pill"><?= e($categories[$category]) ?></span></div>
                                 <h3><?= e(displayTitle($showName)) ?></h3>
                                 <div class="card-meta"><span><?= count($episodes) ?> episodes</span><span>Open series ↗</span></div>
