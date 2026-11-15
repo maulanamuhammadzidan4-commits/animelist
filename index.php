@@ -15,6 +15,11 @@ function e(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function displayTitle(string $value): string {
+    // Only prettify the visible title; keep the real folder name for filesystem paths and URLs.
+    return preg_replace('/_+/', ' ', $value) ?? $value;
+}
+
 function urlPath(array $segments): string {
     return implode('/', array_map('rawurlencode', $segments));
 }
@@ -136,7 +141,7 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#100b0d">
-    <title><?= $selectedEpisode ? e($selectedEpisodeName) . ' — ' : ($selectedShowName ? e($selectedShowName) . ' — ' : '') ?>Anime Library</title>
+    <title><?= $selectedEpisode ? e($selectedEpisodeName) . ' — ' : ($selectedShowName ? e(displayTitle($selectedShowName)) . ' — ' : '') ?>Anime Library</title>
     <style>
         :root {
             color-scheme: dark;
@@ -170,10 +175,9 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
         }
         .nav { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 22px; }
         .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 850; letter-spacing: .04em; }
-        .brand-mark {
-            width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px;
-            color: white; font-size: 17px; background: linear-gradient(145deg, var(--red-soft), #8d0928);
-            box-shadow: 0 7px 24px rgba(220,20,60,.25);
+        .brand-logo {
+            display: block; width: 46px; height: 46px; object-fit: contain;
+            filter: drop-shadow(0 5px 14px rgba(220,20,60,.22));
         }
         .brand small { display: block; color: var(--muted); font-size: 9px; letter-spacing: .22em; font-weight: 700; }
         .nav-right { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 13px; }
@@ -181,14 +185,19 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
         .dot { width: 7px; height: 7px; background: #54d69a; border-radius: 50%; box-shadow: 0 0 12px #54d69a; }
         main { padding: 34px 0 70px; }
         .hero {
-            position: relative; overflow: hidden; padding: clamp(25px, 5vw, 54px);
+            position: relative; isolation: isolate; overflow: hidden; padding: clamp(25px, 5vw, 54px);
+            min-height: 310px; display: flex; flex-direction: column; justify-content: center;
             border: 1px solid #4a2832; border-radius: 26px;
-            background: linear-gradient(115deg, rgba(75,12,30,.88), rgba(32,17,23,.96) 56%, rgba(42,31,19,.88));
+            background:
+                linear-gradient(90deg, rgba(16,8,12,.98) 0%, rgba(25,9,15,.91) 42%, rgba(25,9,15,.30) 100%),
+                url("bg.png") right center / auto 125% no-repeat,
+                linear-gradient(115deg, #4b0c1e, #201117 56%, #2a1f13);
             box-shadow: 0 24px 70px rgba(0,0,0,.2);
         }
         .hero:after {
-            content: "夜"; position: absolute; right: 5%; top: -68px; font-size: clamp(180px, 30vw, 340px);
-            line-height: 1; color: rgba(212,175,55,.055); pointer-events: none; font-family: serif;
+            content: "時"; position: absolute; z-index: -1; right: 5%; top: -68px;
+            font-size: clamp(180px, 30vw, 340px); line-height: 1;
+            color: rgba(212,175,55,.075); pointer-events: none; font-family: serif;
         }
         .eyebrow { color: var(--gold); font-size: 11px; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; }
         h1 { max-width: 680px; margin: 12px 0 12px; font-size: clamp(34px, 6vw, 60px); line-height: 1.04; letter-spacing: -.045em; }
@@ -253,7 +262,13 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
             .nav { min-height: 62px; }
             .nav-right .status { display: none; }
             main { padding-top: 20px; }
-            .hero { border-radius: 20px; }
+            .hero {
+                min-height: 330px; border-radius: 20px;
+                background:
+                    linear-gradient(90deg, rgba(16,8,12,.96), rgba(25,9,15,.70)),
+                    url("bg.png") 68% center / auto 100% no-repeat,
+                    linear-gradient(115deg, #4b0c1e, #201117);
+            }
             .toolbar { align-items: stretch; }
             .tabs { width: fit-content; }
             .search { width: 100%; }
@@ -268,7 +283,7 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
 <header class="topbar">
     <div class="shell nav">
         <a class="brand" href="index.php">
-            <span class="brand-mark">A</span>
+            <img class="brand-logo" src="logo.png" alt="Anime Library logo">
             <span>ANIME LIBRARY<small>LOCAL STREAMING COLLECTION</small></span>
         </a>
         <div class="nav-right">
@@ -284,14 +299,14 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
     <?php endif; ?>
 
     <?php if ($selectedEpisode !== null): ?>
-        <a class="back" href="?anime=<?= rawurlencode($selectedCategory . '/' . $selectedShowName) ?>">← Back to <?= e($selectedShowName) ?></a>
+        <a class="back" href="?anime=<?= rawurlencode($selectedCategory . '/' . $selectedShowName) ?>">← Back to <?= e(displayTitle($selectedShowName)) ?></a>
         <div class="player-wrap">
             <video controls playsinline preload="metadata">
                 <source src="<?= e($videoUrl) ?>">
                 Browser ini tidak dapat memutar format video tersebut.
             </video>
             <div class="player-info">
-                <div class="eyebrow"><?= e($categories[$selectedCategory]) ?> / <?= e($selectedShowName) ?></div>
+                <div class="eyebrow"><?= e($categories[$selectedCategory]) ?> / <?= e(displayTitle($selectedShowName)) ?></div>
                 <h1><?= e($selectedEpisodeName) ?></h1>
                 <p><?= e(strtoupper($selectedEpisode['extension'])) ?> · <?= e(formatBytes($selectedEpisode['size'])) ?></p>
                 <?php if (in_array($selectedEpisode['extension'], ['mkv', 'avi', 'mov'], true)): ?>
@@ -314,7 +329,7 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
         <a class="back" href="index.php">← Back to library</a>
         <section class="detail-head">
             <div class="eyebrow"><?= e($categories[$selectedCategory]) ?> COLLECTION</div>
-            <h1><?= e($selectedShowName) ?></h1>
+            <h1><?= e(displayTitle($selectedShowName)) ?></h1>
             <p style="color:var(--muted);margin:0"><?= count($selectedAnime) ?> video files in this folder</p>
         </section>
         <div class="section-head"><div><h2>Episode List</h2><p>Pilih video untuk mulai menonton</p></div><span class="count"><?= count($selectedAnime) ?> episodes</span></div>
@@ -380,7 +395,7 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
                         <?php foreach ($filtered as $showName => $episodes): ?>
                             <a class="anime-card" href="?anime=<?= rawurlencode($category . '/' . $showName) ?>">
                                 <div class="card-top"><span class="folder-icon">▣</span><span class="pill"><?= e($categories[$category]) ?></span></div>
-                                <h3><?= e($showName) ?></h3>
+                                <h3><?= e(displayTitle($showName)) ?></h3>
                                 <div class="card-meta"><span><?= count($episodes) ?> episodes</span><span>Open series ↗</span></div>
                             </a>
                         <?php endforeach; ?>
