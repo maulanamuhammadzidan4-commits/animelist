@@ -93,6 +93,29 @@ function scanLibrary(string $root, array $categories, array $extensions): array 
 }
 
 $library = scanLibrary($animeRoot, $categories, $videoExtensions);
+
+// Treat immediate child folders containing videos as selectable seasons/parts.
+$seasonGroups = [];
+foreach ($library as $category => $shows) {
+    foreach ($shows as $showName => $episodes) {
+        $groups = [];
+        $rootEpisodes = [];
+        foreach ($episodes as $episode) {
+            $relative = str_replace('\\', '/', $episode['name']);
+            if (str_contains($relative, '/')) {
+                [$seasonName] = explode('/', $relative, 2);
+                $groups[$seasonName][] = $episode;
+            } else {
+                $rootEpisodes[] = $episode;
+            }
+        }
+        if ($rootEpisodes && $groups) $groups['Other Episodes'] = $rootEpisodes;
+        if ($groups) {
+            uksort($groups, 'strnatcasecmp');
+            $seasonGroups[$category][$showName] = $groups;
+        }
+    }
+}
 $totalShows = 0;
 $totalEpisodes = 0;
 foreach ($library as $shows) {
@@ -105,6 +128,7 @@ $selectedCategory = null;
 $selectedEpisode = null;
 $selectedShowName = null;
 $selectedEpisodeName = null;
+$selectedSeasonName = null;
 $errorMessage = '';
 
 if (isset($_GET['anime'])) {
@@ -115,6 +139,20 @@ if (isset($_GET['anime'])) {
         $selectedAnime = $library[$selectedCategory][$selectedShowName];
     } else {
         $errorMessage = 'Anime tidak ditemukan di koleksi.';
+    }
+}
+
+if (isset($_GET['season'])) {
+    $parts = explode('/', (string)$_GET['season'], 3);
+    if (count($parts) === 3
+        && isset($library[$parts[0]][$parts[1]])
+        && isset($seasonGroups[$parts[0]][$parts[1]][$parts[2]])) {
+        $selectedCategory = $parts[0];
+        $selectedShowName = $parts[1];
+        $selectedSeasonName = $parts[2];
+        $selectedAnime = $seasonGroups[$selectedCategory][$selectedShowName][$selectedSeasonName];
+    } else {
+        $errorMessage = 'Season atau part tidak ditemukan.';
     }
 }
 
@@ -134,6 +172,16 @@ if (isset($_GET['watch'])) {
             $selectedEpisodeName = $parts[2];
             $selectedEpisode = $found;
             $selectedAnime = $library[$selectedCategory][$selectedShowName];
+            if (isset($seasonGroups[$selectedCategory][$selectedShowName])) {
+                $episodeParts = explode('/', str_replace('\\', '/', $selectedEpisodeName), 2);
+                if (count($episodeParts) === 2 && isset($seasonGroups[$selectedCategory][$selectedShowName][$episodeParts[0]])) {
+                    $selectedSeasonName = $episodeParts[0];
+                    $selectedAnime = $seasonGroups[$selectedCategory][$selectedShowName][$selectedSeasonName];
+                } elseif (isset($seasonGroups[$selectedCategory][$selectedShowName]['Other Episodes'])) {
+                    $selectedSeasonName = 'Other Episodes';
+                    $selectedAnime = $seasonGroups[$selectedCategory][$selectedShowName][$selectedSeasonName];
+                }
+            }
         } else {
             $errorMessage = 'Episode tidak ditemukan di koleksi.';
         }
@@ -332,14 +380,14 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
     <?php endif; ?>
 
     <?php if ($selectedEpisode !== null): ?>
-        <a class="back" href="?anime=<?= rawurlencode($selectedCategory . '/' . $selectedShowName) ?>">← Back to <?= e(displayTitle($selectedShowName)) ?></a>
+        <a class="back" href="<?= $selectedSeasonName !== null ? '?season=' . rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $selectedSeasonName) : '?anime=' . rawurlencode($selectedCategory . '/' . $selectedShowName) ?>">← Back to <?= e(displayTitle($selectedShowName)) ?><?= $selectedSeasonName !== null ? ' / ' . e(displayTitle($selectedSeasonName)) : '' ?></a>
         <div class="player-wrap">
             <video controls playsinline preload="metadata">
                 <source src="<?= e($videoUrl) ?>">
                 Browser ini tidak dapat memutar format video tersebut.
             </video>
             <div class="player-info">
-                <div class="eyebrow"><?= e($categories[$selectedCategory]) ?> / <?= e(displayTitle($selectedShowName)) ?></div>
+                <div class="eyebrow"><?= e($categories[$selectedCategory]) ?> / <?= e(displayTitle($selectedShowName)) ?><?= $selectedSeasonName !== null ? ' / ' . e(displayTitle($selectedSeasonName)) : '' ?></div>
                 <h1><?= e($selectedEpisode['display'] ?? $selectedEpisodeName) ?></h1>
                 <p><?= e(strtoupper($selectedEpisode['extension'])) ?> · <?= e(formatBytes($selectedEpisode['size'])) ?></p>
                 <?php if (in_array($selectedEpisode['extension'], ['mkv', 'avi', 'mov'], true)): ?>
@@ -347,7 +395,7 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
                 <?php endif; ?>
             </div>
         </div>
-        <div class="section-head"><div><h2>Episodes</h2><p>Dua episode sebelumnya, episode aktif, lalu episode berikutnya</p></div><span class="count"><?= count($selectedAnime) ?> files</span></div>
+        <div class="section-head"><div><h2>Episodes<?= $selectedSeasonName !== null ? ' · ' . e(displayTitle($selectedSeasonName)) : '' ?></h2><p>Dua episode sebelumnya, episode aktif, lalu episode berikutnya</p></div><span class="count"><?= count($selectedAnime) ?> files</span></div>
         <?php
             // Rotate the list so up to two previous episodes appear first,
             // the currently playing episode is next, and the remaining list wraps to episode 1.
@@ -386,18 +434,40 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
             <h1><?= e(displayTitle($selectedShowName)) ?></h1>
             <p style="color:#e0cfd5;margin:0"><?= count($selectedAnime) ?> video files in this folder</p>
         </section>
-        <div class="section-head"><div><h2>Episode List</h2><p>Pilih video untuk mulai menonton</p></div><span class="count"><?= count($selectedAnime) ?> episodes</span></div>
-        <?php if (!$selectedAnime): ?>
-            <div class="empty">Belum ada file video yang dikenali di folder ini.</div>
-        <?php else: ?>
+        <?php if (isset($seasonGroups[$selectedCategory][$selectedShowName]) && $selectedSeasonName === null): ?>
+            <?php $showSeasons = $seasonGroups[$selectedCategory][$selectedShowName]; ?>
+            <div class="section-head">
+                <div><h2>Seasons & Parts</h2><p>Pilih season atau part yang ingin ditonton</p></div>
+                <span class="count"><?= count($showSeasons) ?> seasons / parts</span>
+            </div>
             <div class="episode-list">
-                <?php foreach ($selectedAnime as $episode): ?>
-                    <a class="episode" href="?watch=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $episode['name']) ?>">
-                        <span class="episode-name"><span class="play-icon">▷</span><?= e($episode['display'] ?? $episode['name']) ?></span>
-                        <span class="episode-size"><?= e(formatBytes($episode['size'])) ?></span>
+                <?php foreach ($showSeasons as $seasonName => $seasonEpisodes): ?>
+                    <a class="episode" href="?season=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $seasonName) ?>">
+                        <span class="episode-name"><span class="play-icon">▷</span><?= e(displayTitle($seasonName)) ?></span>
+                        <span class="episode-size"><?= count($seasonEpisodes) ?> episodes</span>
                     </a>
                 <?php endforeach; ?>
             </div>
+        <?php else: ?>
+            <?php if ($selectedSeasonName !== null): ?>
+                <a class="back" href="?anime=<?= rawurlencode($selectedCategory . '/' . $selectedShowName) ?>">← All seasons / parts</a>
+            <?php endif; ?>
+            <div class="section-head">
+                <div><h2>Episode List<?= $selectedSeasonName !== null ? ' · ' . e(displayTitle($selectedSeasonName)) : '' ?></h2><p>Pilih video untuk mulai menonton</p></div>
+                <span class="count"><?= count($selectedAnime) ?> episodes</span>
+            </div>
+            <?php if (!$selectedAnime): ?>
+                <div class="empty">Belum ada file video yang dikenali di folder ini.</div>
+            <?php else: ?>
+                <div class="episode-list">
+                    <?php foreach ($selectedAnime as $episode): ?>
+                        <a class="episode" href="?watch=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $episode['name']) ?>">
+                            <span class="episode-name"><span class="play-icon">▷</span><?= e($episode['display'] ?? $episode['name']) ?></span>
+                            <span class="episode-size"><?= e(formatBytes($episode['size'])) ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
     <?php else: ?>
@@ -458,7 +528,7 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
                                <?php if ($hasPoster): ?>style="background-image: linear-gradient(180deg, rgba(16,8,12,.48) 0%, rgba(16,8,12,.18) 35%, rgba(12,7,10,.96) 100%), url('<?= e($posterUrl) ?>');"<?php endif; ?>>
                                 <div class="card-top"><span class="folder-icon">▣</span><span class="pill"><?= e($categories[$category]) ?></span></div>
                                 <h3><?= e(displayTitle($showName)) ?></h3>
-                                <div class="card-meta"><span><?= count($episodes) ?> episodes</span><span>Open series ↗</span></div>
+                                <div class="card-meta"><span><?php if (isset($seasonGroups[$category][$showName])): ?><?= count($seasonGroups[$category][$showName]) ?> seasons / parts<?php else: ?><?= count($episodes) ?> episodes<?php endif; ?></span><span>Open series ↗</span></div>
                             </a>
                         <?php endforeach; ?>
                     </div>
