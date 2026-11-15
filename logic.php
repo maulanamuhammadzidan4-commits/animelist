@@ -200,9 +200,16 @@ if ($selectedEpisode !== null && $selectedCategory !== null && $selectedShowName
 }
 
 $orderedEpisodes = [];
+$previousEpisode = null;
+$nextEpisode = null;
 if ($selectedEpisode !== null && $selectedAnime !== null) {
-    // Keep up to two previous episodes first, then wrap the remaining list.
     $currentIndex = array_search($selectedEpisodeName, array_column($selectedAnime, 'name'), true);
+    if ($currentIndex !== false) {
+        $previousEpisode = $selectedAnime[$currentIndex - 1] ?? null;
+        $nextEpisode = $selectedAnime[$currentIndex + 1] ?? null;
+    }
+
+    // Keep up to two previous episodes first, then wrap the remaining list.
     $startIndex = ($currentIndex === false) ? 0 : max(0, $currentIndex - 2);
     $orderedEpisodes = array_merge(
         array_slice($selectedAnime, $startIndex),

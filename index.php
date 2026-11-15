@@ -43,6 +43,26 @@
                 <?php endif; ?>
             </div>
         </div>
+        <nav class="episode-navigation" aria-label="Episode navigation">
+            <?php if ($previousEpisode !== null): ?>
+                <a class="episode-nav-button" rel="prev" href="?watch=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $previousEpisode['name']) ?>">
+                    <span aria-hidden="true">←</span> Previous episode
+                </a>
+            <?php else: ?>
+                <span class="episode-nav-button disabled" aria-disabled="true">
+                    <span aria-hidden="true">←</span> Previous episode
+                </span>
+            <?php endif; ?>
+            <?php if ($nextEpisode !== null): ?>
+                <a class="episode-nav-button next" rel="next" href="?watch=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $nextEpisode['name']) ?>">
+                    Next episode <span aria-hidden="true">→</span>
+                </a>
+            <?php else: ?>
+                <span class="episode-nav-button next disabled" aria-disabled="true">
+                    Next episode <span aria-hidden="true">→</span>
+                </span>
+            <?php endif; ?>
+        </nav>
         <div class="section-head"><div><h2>Episodes<?= $selectedSeasonName !== null ? ' · ' . e(displayTitle($selectedSeasonName)) : '' ?></h2><p>Dua episode sebelumnya, episode aktif, lalu episode berikutnya</p></div><span class="count"><?= count($selectedAnime) ?> files</span></div>
         <div class="episode-list">
             <?php foreach ($orderedEpisodes as $episode): ?>

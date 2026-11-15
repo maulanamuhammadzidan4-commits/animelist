@@ -128,6 +128,15 @@ video { display: block; width: 100%; max-height: 72vh; aspect-ratio: 16/9; backg
 .player-info h1 { margin: 4px 0 8px; font-size: clamp(22px, 4vw, 34px); overflow-wrap: anywhere; }
 .player-info p { margin: 0; color: var(--muted); font-size: 12px; }
 .compat { margin-top: 14px; padding: 12px 14px; border-radius: 12px; color: #e7d9a8; background: rgba(212,175,55,.08); font-size: 12px; }
+.episode-navigation { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 24px; }
+.episode-nav-button {
+    display: inline-flex; align-items: center; gap: 9px; padding: 11px 15px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+    color: var(--text); font-size: 13px; font-weight: 700;
+}
+.episode-nav-button:hover:not(.disabled) { border-color: #8d344b; background: var(--panel-2); }
+.episode-nav-button.next { margin-left: auto; }
+.episode-nav-button.disabled { color: #806d74; cursor: not-allowed; }
 footer { padding: 24px 0 35px; border-top: 1px solid rgba(255,255,255,.06); color: #806d74; font-size: 11px; text-align: center; }
 @media (max-width: 620px) {
     .shell { width: min(100% - 24px, 1180px); }
