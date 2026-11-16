@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#100b0d">
-    <title><?= $selectedEpisode ? e($selectedEpisodeName) . ' — ' : ($selectedShowName ? e(displayTitle($selectedShowName)) . ' — ' : '') ?>Anime Library</title>
+    <title><?= $selectedEpisode ? e($selectedEpisodeName) . ' — ' : ($selectedShowName ? e(displayTitle($selectedShowName)) . ' — ' : '') ?>AniList</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     <div class="shell nav">
         <a class="brand" href="index.php">
             <img class="brand-logo" src="logo.png" alt="Anime Library logo">
-            <span>ANIME LIBRARY<small>LOCAL STREAMING COLLECTION</small></span>
+            <span>ANILIST<small>Local Anime Library Collection</small></span>
         </a>
         <div class="nav-right">
             <span class="status"><i class="dot"></i> LOCAL SERVER</span>
@@ -126,7 +126,7 @@
         <section class="hero">
             <div class="eyebrow">YOUR PERSONAL ANIME SERVER</div>
             <h1>One library.<br><span style="color:var(--red-soft)">Your own world.</span></h1>
-            <p>Koleksi anime pribadi yang bisa diakses melalui jaringan lokal. Pilih seri, buka episode, lalu nikmati tontonan dari browser.</p>
+            <p>Koleksi anime pribadi lokal yang telah dikumpulkan selama lebih dari satu tahun dapat diakses dengan mudah lewat local IP tanpa memerlukan koneksi internet, cukup koneksi yang sama, streaming dapat dilakukan</p>
             <div class="stats">
                 <div class="stat"><strong><?= number_format($totalShows) ?></strong><span>Anime titles</span></div>
                 <div class="stat"><strong><?= number_format($totalEpisodes) ?></strong><span>Video files</span></div>
