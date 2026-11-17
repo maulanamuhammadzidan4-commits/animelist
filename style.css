@@ -127,8 +127,11 @@ video { display: block; width: 100%; max-height: 72vh; aspect-ratio: 16/9; backg
 .player-info { padding: 19px 21px; background: var(--panel); }
 .player-info h1 { margin: 4px 0 8px; font-size: clamp(22px, 4vw, 34px); overflow-wrap: anywhere; }
 .player-info p { margin: 0; color: var(--muted); font-size: 12px; }
+.player-info .autoplay-notice { margin-top: 12px; color: #e7d9a8; }
 .compat { margin-top: 14px; padding: 12px 14px; border-radius: 12px; color: #e7d9a8; background: rgba(212,175,55,.08); font-size: 12px; }
 .episode-navigation { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 24px; }
+.auto-next-toggle { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 13px; cursor: pointer; }
+.auto-next-toggle input { accent-color: var(--red); }
 .episode-nav-button {
     display: inline-flex; align-items: center; gap: 9px; padding: 11px 15px;
     border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
@@ -157,4 +160,6 @@ footer { padding: 24px 0 35px; border-top: 1px solid rgba(255,255,255,.06); colo
     .anime-card { min-height: 158px; padding: 13px; }
     .anime-card h3 { font-size: 13px; }
     .episode { padding: 12px; }
+    .episode-navigation { flex-wrap: wrap; }
+    .auto-next-toggle { order: 1; }
 }

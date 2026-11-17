@@ -41,6 +41,7 @@
                 <?php if (in_array($selectedEpisode['extension'], ['mkv', 'avi', 'mov'], true)): ?>
                     <div class="compat">Catatan: dukungan MKV, AVI, dan beberapa MOV bergantung pada browser serta codec di dalam file. Jika video tidak tampil, coba buka file MP4/WebM atau gunakan pemutar eksternal seperti VLC.</div>
                 <?php endif; ?>
+                <p class="autoplay-notice" id="autoplay-notice" role="status" hidden>Browser memblokir autoplay. Tekan tombol putar untuk melanjutkan.</p>
             </div>
         </div>
         <nav class="episode-navigation" aria-label="Episode navigation">
@@ -53,6 +54,10 @@
                     <span aria-hidden="true">←</span> Previous episode
                 </span>
             <?php endif; ?>
+            <label class="auto-next-toggle">
+                <input id="auto-next-toggle" type="checkbox" checked>
+                <span>Auto next &amp; autoplay</span>
+            </label>
             <?php if ($nextEpisode !== null): ?>
                 <a class="episode-nav-button next" rel="next" href="?watch=<?= rawurlencode($selectedCategory . '/' . $selectedShowName . '/' . $nextEpisode['name']) ?>">
                     Next episode <span aria-hidden="true">→</span>
@@ -185,13 +190,37 @@
     <?php endif; ?>
 </main>
 
-<?php if ($selectedEpisode !== null && $nextEpisode !== null): ?>
+<?php if ($selectedEpisode !== null): ?>
 <script>
+    const autoNextToggle = document.querySelector('#auto-next-toggle');
+    const autoNextStorageKey = 'animelist.autoNextEnabled';
+    const storedAutoNext = localStorage.getItem(autoNextStorageKey);
+    autoNextToggle.checked = storedAutoNext !== 'false';
+    autoNextToggle.addEventListener('change', () => {
+        localStorage.setItem(autoNextStorageKey, String(autoNextToggle.checked));
+    });
+
     const episodePlayer = document.querySelector('.player-wrap video');
     const nextEpisodeLink = document.querySelector('.episode-navigation a[rel="next"]');
-    episodePlayer.addEventListener('ended', () => {
-        window.location.assign(nextEpisodeLink.href);
-    }, { once: true });
+    const autoplayNotice = document.querySelector('#autoplay-notice');
+
+    if (new URLSearchParams(window.location.search).get('autoplay') === '1' && autoNextToggle.checked) {
+        episodePlayer.play().catch((error) => {
+            autoplayNotice.textContent = error.name === 'NotAllowedError'
+                ? 'Browser memblokir autoplay. Tekan tombol putar untuk melanjutkan.'
+                : 'Video tidak dapat diputar otomatis. Tekan tombol putar untuk mencoba.';
+            autoplayNotice.hidden = false;
+        });
+    }
+
+    if (nextEpisodeLink) {
+        episodePlayer.addEventListener('ended', () => {
+            if (!autoNextToggle.checked) return;
+            const nextEpisodeUrl = new URL(nextEpisodeLink.href);
+            nextEpisodeUrl.searchParams.set('autoplay', '1');
+            window.location.assign(nextEpisodeUrl.href);
+        }, { once: true });
+    }
 </script>
 <?php endif; ?>
 

@@ -12,7 +12,7 @@ A self-hosted anime library for a local network. Browse your collection, select 
 - Show a season/part selection page when an anime contains subfolders.
 - Use `poster.png` from an anime's folder for its card and detail-page artwork when available.
 - Play supported video formats through the browser's HTML5 video player.
-- Automatically continue to the next episode when playback ends, when one is available.
+- Toggle automatic next-episode playback on or off; the preference is saved in the browser.
 - Access the library from other devices connected to the same local Wi-Fi/LAN.
 
 ## Project layout
@@ -56,6 +56,8 @@ The application scans the `end` and `ongoing` directories. Keep the actual media
 - PHP with the extensions required by the project (at minimum, commonly `mbstring` for multibyte title searching)
 - A modern browser on the client device
 - All devices must be connected to the same local network to use the LAN address
+
+Automatic next-episode playback is enabled by default and can be toggled from the player; the preference is saved in the browser. Browser autoplay policies may block playback of the next episode, in which case press the player's play button to continue.
 
 Video playback depends on the browser and the codecs inside each file. MP4 with H.264 video and AAC audio is broadly supported. MKV and AVI are containers, not guarantees of browser compatibility; playback may fail even when the file is readable by Apache.
 
