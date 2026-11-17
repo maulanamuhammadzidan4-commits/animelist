@@ -57,7 +57,7 @@ The application scans the `end` and `ongoing` directories. Keep the actual media
 - A modern browser on the client device
 - All devices must be connected to the same local network to use the LAN address
 
-Automatic next-episode playback is enabled by default and can be toggled from the player; the preference is saved in the browser. Browser autoplay policies may block playback of the next episode, in which case press the player's play button to continue.
+Automatic next-episode playback is enabled by default and can be toggled from the player; the preference is saved in the browser. If a browser blocks autoplay with sound, press the player's play button to continue. To allow autoplay with sound in Firefox, enable audio and video autoplay for this local site in its site permissions.
 
 Video playback depends on the browser and the codecs inside each file. MP4 with H.264 video and AAC audio is broadly supported. MKV and AVI are containers, not guarantees of browser compatibility; playback may fail even when the file is readable by Apache.
 
