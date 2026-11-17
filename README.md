@@ -12,6 +12,7 @@ A self-hosted anime library for a local network. Browse your collection, select 
 - Show a season/part selection page when an anime contains subfolders.
 - Use `poster.png` from an anime's folder for its card and detail-page artwork when available.
 - Play supported video formats through the browser's HTML5 video player.
+- Automatically continue to the next episode when playback ends, when one is available.
 - Access the library from other devices connected to the same local Wi-Fi/LAN.
 
 ## Project layout

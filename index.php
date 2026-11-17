@@ -185,6 +185,16 @@
     <?php endif; ?>
 </main>
 
+<?php if ($selectedEpisode !== null && $nextEpisode !== null): ?>
+<script>
+    const episodePlayer = document.querySelector('.player-wrap video');
+    const nextEpisodeLink = document.querySelector('.episode-navigation a[rel="next"]');
+    episodePlayer.addEventListener('ended', () => {
+        window.location.assign(nextEpisodeLink.href);
+    }, { once: true });
+</script>
+<?php endif; ?>
+
 <footer class="shell">ANIME LIBRARY · PRIVATE LOCAL NETWORK · YOUR COLLECTION, YOUR CONTROL</footer>
 </body>
 </html>
