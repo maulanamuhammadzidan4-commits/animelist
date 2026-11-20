@@ -129,16 +129,32 @@ video { display: block; width: 100%; max-height: 72vh; aspect-ratio: 16/9; backg
 .player-info p { margin: 0; color: var(--muted); font-size: 12px; }
 .player-info .autoplay-notice { margin-top: 12px; color: #e7d9a8; }
 .compat { margin-top: 14px; padding: 12px 14px; border-radius: 12px; color: #e7d9a8; background: rgba(212,175,55,.08); font-size: 12px; }
-.episode-navigation { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 24px; }
-.auto-next-toggle { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 13px; cursor: pointer; }
-.auto-next-toggle input { accent-color: var(--red); }
+.episode-navigation {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center; gap: 12px; margin: 14px 0 24px;
+}
+.auto-next-toggle { display: inline-flex; justify-self: center; cursor: pointer; }
+.auto-next-toggle input {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap;
+}
+.auto-next-toggle span {
+    display: inline-flex; align-items: center; justify-content: center; padding: 11px 15px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+    color: var(--text); font-size: 13px; font-weight: 700;
+}
+.auto-next-toggle input:checked + span {
+    border-color: var(--red); background: var(--red);
+    box-shadow: 0 5px 18px rgba(220,20,60,.3);
+}
+.auto-next-toggle input:focus-visible + span { outline: 2px solid var(--red-soft); outline-offset: 3px; }
 .episode-nav-button {
     display: inline-flex; align-items: center; gap: 9px; padding: 11px 15px;
     border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
     color: var(--text); font-size: 13px; font-weight: 700;
 }
 .episode-nav-button:hover:not(.disabled) { border-color: #8d344b; background: var(--panel-2); }
-.episode-nav-button.next { margin-left: auto; }
+.episode-nav-button.next { justify-self: end; }
 .episode-nav-button.disabled { color: #806d74; cursor: not-allowed; }
 footer { padding: 24px 0 35px; border-top: 1px solid rgba(255,255,255,.06); color: #806d74; font-size: 11px; text-align: center; }
 @media (max-width: 620px) {
@@ -160,6 +176,7 @@ footer { padding: 24px 0 35px; border-top: 1px solid rgba(255,255,255,.06); colo
     .anime-card { min-height: 158px; padding: 13px; }
     .anime-card h3 { font-size: 13px; }
     .episode { padding: 12px; }
-    .episode-navigation { flex-wrap: wrap; }
-    .auto-next-toggle { order: 1; }
+    .episode-navigation { gap: 6px; }
+    .episode-nav-button, .auto-next-toggle span { padding: 9px 7px; font-size: 11px; }
+    .episode-nav-button { gap: 5px; }
 }
